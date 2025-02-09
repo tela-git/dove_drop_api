@@ -5,6 +5,7 @@ import com.example.data.model.LoginSuccessResponse
 import com.example.data.model.SignupCred
 import com.example.data.model.User
 import com.example.domain.model.network.BaseResponse
+import com.example.security.token.TokenConfig
 
 interface AuthenticationRepo {
     suspend fun signupUser(signupCred: SignupCred) : BaseResponse<User?>

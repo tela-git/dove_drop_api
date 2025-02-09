@@ -3,15 +3,14 @@ package com.example.routes
 import com.example.data.model.LoginCred
 import com.example.data.model.LoginSuccessResponse
 import com.example.data.model.SignupCred
-import com.example.data.model.User
 import com.example.domain.auth.AuthenticationRepo
 import com.example.domain.model.network.BaseResponse
-import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import io.ktor.http.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.slf4j.Logger
 
 fun Route.authRoutes(
     authenticationRepo: AuthenticationRepo
@@ -51,8 +50,32 @@ fun Route.authRoutes(
                 }
             }
             is BaseResponse.Success<LoginSuccessResponse> -> {
-                call.respond(HttpStatusCode.OK, response.data.token)
+                call.respond(
+                    HttpStatusCode.OK,
+                    mapOf("token" to response.data.token)
+                )
             }
+        }
+    }
+}
+
+fun Route.authenticate() {
+    authenticate {
+        get("/authenticate") {
+            call.respond(HttpStatusCode.OK, "Authenticated successfully.")
+        }
+    }
+}
+
+fun Route.getUserId() {
+    authenticate {
+        get("/userId") {
+            val principal = call.principal<JWTPrincipal>()
+            val userId = principal?.getClaim(name = "userId", clazz = String::class)
+            call.respond(
+                HttpStatusCode.OK,
+                mapOf("userId" to userId)
+            )
         }
     }
 }

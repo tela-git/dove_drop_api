@@ -23,16 +23,15 @@ fun Application.configureRouting(
     authenticationRepo: AuthenticationRepo
 ) {
     routing {
-        get("/") {
-            call.respondText("Hello World!")
-        }
-
         //Authentication routes
         authRoutes(
             authenticationRepo = authenticationRepo
         )
+        //authenticated routes
+        authenticate()
+        getUserId()
 
-        // Static plugin. Try to access `/static/index.html`
+        // Static plugin
         staticResources("/static", "static")
     }
 }
