@@ -1,10 +1,10 @@
 package com.example
 
 import com.example.data.auth.AuthenticationRepoImpl
+import com.example.data.database.remote.configureDatabases
+import com.example.data.database.remote.connectToMongoDB
 import com.example.routes.configureRouting
 import com.example.security.hashing.SHA256HashingService
-import com.mongodb.kotlin.client.coroutine.MongoClient
-import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {

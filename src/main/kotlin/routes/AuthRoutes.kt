@@ -13,7 +13,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.slf4j.Logger
 
-fun Route.signUp(
+fun Route.authRoutes(
     authenticationRepo: AuthenticationRepo
 ) {
     post("/auth/signup") {
@@ -33,6 +33,7 @@ fun Route.signUp(
             }
         }
     }
+
 
     post("/auth/login") {
         val loginCred: LoginCred = runCatching<LoginCred?> { call.receiveNullable<LoginCred>() }.getOrNull() ?: run {

@@ -1,4 +1,4 @@
-package com.example
+package com.example.data.database.remote
 
 import com.mongodb.kotlin.client.coroutine.MongoClient
 import com.mongodb.kotlin.client.coroutine.MongoDatabase

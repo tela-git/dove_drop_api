@@ -27,8 +27,8 @@ fun Application.configureRouting(
             call.respondText("Hello World!")
         }
 
-        //signup route
-        signUp(
+        //Authentication routes
+        authRoutes(
             authenticationRepo = authenticationRepo
         )
 
