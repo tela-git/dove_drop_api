@@ -26,7 +26,7 @@ DOVE DROP API is the backend service for the DOVE DROP app, built using Ktor. It
 ## Setup Instructions
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/tela-git/dove_drop_api.git or  git clone git@github.com:tela-git/dove_drop_api.git
    cd dove-drop-api
    ```
 2. Configure environment variables for MongoDB and JWT secrets.
