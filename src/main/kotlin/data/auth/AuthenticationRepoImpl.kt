@@ -1,6 +1,7 @@
 package com.example.data.auth
 
 import com.example.data.model.*
+import com.example.data.model.auth.*
 import com.example.domain.auth.AuthenticationRepo
 import com.example.domain.model.network.BaseResponse
 import com.example.domain.model.security.SaltedHash
@@ -98,7 +99,7 @@ class AuthenticationRepoImpl(
                         value = user.id!!.toHexString()
                     )
                 )
-                BaseResponse.Success("",LoginSuccessResponse(token))
+                BaseResponse.Success("", LoginSuccessResponse(token))
             }
         }
     }

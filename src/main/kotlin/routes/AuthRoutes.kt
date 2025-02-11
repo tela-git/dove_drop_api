@@ -1,8 +1,7 @@
 package com.example.routes
 
 import com.example.data.auth.OTPService
-import com.example.data.email.EmailRepositoryImpl
-import com.example.data.model.*
+import com.example.data.model.auth.*
 import com.example.domain.auth.AuthenticationRepo
 import com.example.domain.model.network.BaseResponse
 import io.ktor.http.*
@@ -83,7 +82,7 @@ fun Route.authRoutes(
 
     }
 
-    post("/auth/password-reset") {
+    post("/auth/reset-password") {
         val resetPasswordData: ResetPasswordData = runCatching { call.receiveNullable<ResetPasswordData>() }
             .getOrNull() ?: run {
                 call.respond(HttpStatusCode.BadRequest, "Enter data in a valid format!")

@@ -26,6 +26,8 @@ repositories {
 }
 
 dependencies {
+    implementation("io.ktor:ktor-server-core-jvm:3.0.3")
+    implementation("io.ktor:ktor-server-websockets-jvm:3.0.3")
     val ktorVersion = "3.0.3"
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-auth")
@@ -50,12 +52,13 @@ dependencies {
     implementation("com.sun.mail:javax.mail:1.6.2")
 
 
-
     implementation("io.insert-koin:koin-ktor:$koin_version")
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
     implementation("io.ktor:ktor-server-netty")
+    implementation("io.ktor:ktor-server-websockets:$ktorVersion")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("io.ktor:ktor-server-config-yaml")
+
     testImplementation("io.ktor:ktor-server-test-host")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }

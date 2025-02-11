@@ -1,5 +1,6 @@
 package com.example
 
+import com.example.data.ChatRepositoryImpl
 import com.example.data.auth.AuthenticationRepoImpl
 import com.example.data.auth.OTPService
 import com.example.data.database.remote.configureDatabases
@@ -39,15 +40,18 @@ fun Application.module() {
         tokenConfig = tokenConfig,
         otpService = otpService
     )
+    val chatRepository = ChatRepositoryImpl(database = mongoDatabase)
 
     configureSecurity(
         tokenConfig = tokenConfig
     )
     configureSerialization()
     configureDatabases()
+    configureWebSockets()
     //configureFrameworks()
     configureRouting(
         authenticationRepo = authenticationRepo,
-        otpService = otpService
+        otpService = otpService,
+        chatRepository = chatRepository
     )
 }

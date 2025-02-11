@@ -1,8 +1,8 @@
 package com.example.domain.auth
 
 import com.example.data.model.*
+import com.example.data.model.auth.*
 import com.example.domain.model.network.BaseResponse
-import com.example.security.token.TokenConfig
 
 interface AuthenticationRepo {
     suspend fun signupUser(signupCred: SignupCred) : BaseResponse<User?>

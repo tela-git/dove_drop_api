@@ -1,16 +1,11 @@
 package com.example.data.auth
 
-import com.example.data.model.OTP
+import com.example.data.model.auth.OTP
 import com.example.domain.email.EmailRepository
 import com.mongodb.client.model.Filters
-import com.mongodb.client.model.ReplaceOptions
 import com.mongodb.client.model.UpdateOptions
 import com.mongodb.client.model.Updates
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
-import net.mamoe.yamlkt.toYamlElementOrNull
-import org.bson.types.ObjectId
-import java.util.Date
-import kotlin.random.Random
 
 class OTPService(
     private val emailRepository: EmailRepository,
