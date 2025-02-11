@@ -1,8 +1,8 @@
 package com.example.routes
 
-import com.example.data.model.SignupCred
-import com.example.data.model.User
+import com.example.data.auth.OTPService
 import com.example.domain.auth.AuthenticationRepo
+import com.example.domain.email.EmailRepository
 import com.mongodb.client.*
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
 import io.ktor.http.*
@@ -18,15 +18,19 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.util.*
 import org.jetbrains.exposed.sql.*
+import org.koin.ktor.ext.get
 
 fun Application.configureRouting(
-    authenticationRepo: AuthenticationRepo
+    authenticationRepo: AuthenticationRepo,
+    otpService: OTPService
 ) {
     routing {
         //Authentication routes
         authRoutes(
-            authenticationRepo = authenticationRepo
+            authenticationRepo = authenticationRepo,
+            otpService = otpService
         )
+
         //authenticated routes
         authenticate()
         getUserId()

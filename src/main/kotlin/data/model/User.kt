@@ -11,6 +11,7 @@ data class User(
     val password: String,
     val imageUrl: String?,
     val salt: String,
+    val verified: Boolean
 )
 
 fun User.toDomainUser() {

@@ -1,8 +1,8 @@
 package com.example.routes
 
-import com.example.data.model.LoginCred
-import com.example.data.model.LoginSuccessResponse
-import com.example.data.model.SignupCred
+import com.example.data.auth.OTPService
+import com.example.data.email.EmailRepositoryImpl
+import com.example.data.model.*
 import com.example.domain.auth.AuthenticationRepo
 import com.example.domain.model.network.BaseResponse
 import io.ktor.http.*
@@ -13,7 +13,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Route.authRoutes(
-    authenticationRepo: AuthenticationRepo
+    authenticationRepo: AuthenticationRepo,
+    otpService: OTPService
 ) {
     post("/auth/signup") {
         val signupCred: SignupCred = runCatching<SignupCred?> { call.receiveNullable<SignupCred>() }.getOrNull() ?: run {
@@ -27,7 +28,7 @@ fun Route.authRoutes(
                 return@post
             }
             is BaseResponse.Success<*> -> {
-                call.respond(HttpStatusCode.Created, "User created successfully.")
+                call.respond(HttpStatusCode.OK, "OTP sent to your your email address")
                 return@post
             }
         }
@@ -46,6 +47,7 @@ fun Route.authRoutes(
                 when(response.errorInt) {
                     404 ->  call.respond(HttpStatusCode.BadRequest, "Enter valid details!")
                     401 ->  call.respond(HttpStatusCode.BadRequest, "Enter valid details!")
+                    403 -> call.respond(HttpStatusCode.Forbidden, "Verify your email first.")
                     else ->  call.respond(HttpStatusCode.BadRequest, "Something went wrong!")
                 }
             }
@@ -55,6 +57,65 @@ fun Route.authRoutes(
                     mapOf("token" to response.data.token)
                 )
             }
+        }
+    }
+
+    post("/auth/email-verify") {
+        val otpReceived: OTPReceivable = runCatching<OTPReceivable?> { call.receiveNullable<OTPReceivable>() }
+            .getOrNull() ?: run {
+                call.respond(HttpStatusCode.BadRequest, "Enter 6 digit OTP correctly.")
+            return@post
+        }
+        if(otpReceived.otp.length == 6 && otpReceived.otp.all { it.isDigit() } ) {
+            val verified = authenticationRepo.verifyEmail(
+                otpReceivable = otpReceived
+            )
+            if(verified) {
+                val added = authenticationRepo.updateUserToVerified(email = otpReceived.email)
+                if(added) call.respond(HttpStatusCode.OK, "Your email is verified.")
+            } else {
+                call.respond(HttpStatusCode.BadRequest, "Invalid OTP entered.")
+            }
+        } else {
+            call.respond(HttpStatusCode.BadRequest, "Enter 6 digit OTP correctly.")
+            return@post
+        }
+
+    }
+
+    post("/auth/password-reset") {
+        val resetPasswordData: ResetPasswordData = runCatching { call.receiveNullable<ResetPasswordData>() }
+            .getOrNull() ?: run {
+                call.respond(HttpStatusCode.BadRequest, "Enter data in a valid format!")
+            return@post
+        }
+        if(resetPasswordData.otp.length == 6 && resetPasswordData.otp.all { it.isDigit() } ) {
+            when(val hasResetResponse = authenticationRepo.resetPassword(resetPasswordData)) {
+                is BaseResponse.Success -> {
+                    call.respond(HttpStatusCode.OK, hasResetResponse.message)
+                }
+                is BaseResponse.Failure -> {
+                    call.respond(HttpStatusCode.BadRequest, hasResetResponse.errorMessage)
+                }
+            }
+        } else {
+            call.respond(HttpStatusCode.BadRequest, "Enter 6 digit OTP correctly.")
+            return@post
+        }
+
+    }
+    post("/auth/forgot-password") {
+        val email: ForgotPasswordData = runCatching { call.receiveNullable<ForgotPasswordData>() }
+            .getOrNull() ?: run {
+            call.respond(HttpStatusCode.BadRequest, "Enter email in a valid format!")
+            return@post
+        }
+        val sent = otpService.sendOTPForVerification(toEmail = email.email)
+        if(sent) {
+            call.respond(HttpStatusCode.OK, "OTP send to your email: ${email.email}")
+            return@post
+        } else {
+            call.respond(HttpStatusCode.ServiceUnavailable, "Error sending OTP!, please try after some time.")
         }
     }
 }

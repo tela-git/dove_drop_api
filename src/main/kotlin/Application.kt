@@ -1,8 +1,11 @@
 package com.example
 
 import com.example.data.auth.AuthenticationRepoImpl
+import com.example.data.auth.OTPService
 import com.example.data.database.remote.configureDatabases
 import com.example.data.database.remote.connectToMongoDB
+import com.example.data.email.EmailRepositoryImpl
+import com.example.domain.email.EmailRepository
 import com.example.routes.configureRouting
 import com.example.security.configureSecurity
 import com.example.security.hashing.SHA256HashingService
@@ -18,18 +21,23 @@ fun Application.module() {
     val mongoDatabase = connectToMongoDB()
     val sha256HashingService = SHA256HashingService()
     val tokenService = JWTTokenService()
+    val emailRepository = EmailRepositoryImpl()
     val tokenConfig = TokenConfig(
         issuer = environment.config.property("jwt.issuer").getString(),
         audience = environment.config.property("jwt.audience").getString(),
         secret = System.getenv("JWTSECRET"),
         expiresIn = 1000L * 60L * 60L * 24L * 30L // for one month
     )
-
+    val otpService = OTPService(
+        emailRepository = emailRepository,
+        database = mongoDatabase
+    )
     val authenticationRepo = AuthenticationRepoImpl(
         database = mongoDatabase,
         hashingService = sha256HashingService,
         tokenService = tokenService,
-        tokenConfig = tokenConfig
+        tokenConfig = tokenConfig,
+        otpService = otpService
     )
 
     configureSecurity(
@@ -39,6 +47,7 @@ fun Application.module() {
     configureDatabases()
     //configureFrameworks()
     configureRouting(
-        authenticationRepo = authenticationRepo
+        authenticationRepo = authenticationRepo,
+        otpService = otpService
     )
 }
