@@ -59,7 +59,7 @@ fun Route.authRoutes(
         }
     }
 
-    post("/auth/email-verify") {
+    post("/auth/verify-email") {
         val otpReceived: OTPReceivable = runCatching<OTPReceivable?> { call.receiveNullable<OTPReceivable>() }
             .getOrNull() ?: run {
                 call.respond(HttpStatusCode.BadRequest, "Enter 6 digit OTP correctly.")
