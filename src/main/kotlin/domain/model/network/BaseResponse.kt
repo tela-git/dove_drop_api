@@ -8,6 +8,7 @@ sealed class BaseResponse<out T> {
     @Serializable
     data class Failure(
         val errorMessage: String,
-        val errorInt: Int? = null
+        val errorInt: Int? = null,
+        val messageForUser: String? = null
     ): BaseResponse<Nothing>()
 }

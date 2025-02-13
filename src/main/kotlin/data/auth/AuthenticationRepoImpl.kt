@@ -22,8 +22,7 @@ class AuthenticationRepoImpl(
     private val tokenConfig: TokenConfig,
     private val otpService: OTPService
 ): AuthenticationRepo {
-    private val usersCollectionName = "users"
-    private val usersCollection = database.getCollection<User>(usersCollectionName)
+    private val usersCollection = database.getCollection<User>("users")
     private val otpCollection = database.getCollection<OTP>("otps")
 
     override suspend fun signupUser(signupCred: SignupCred): BaseResponse<User?> {

@@ -27,7 +27,7 @@ fun Application.module() {
         issuer = environment.config.property("jwt.issuer").getString(),
         audience = environment.config.property("jwt.audience").getString(),
         secret = System.getenv("JWTSECRET"),
-        expiresIn = 1000L * 60L * 60L * 24L * 30L // for one month
+        expiresIn = 1000L * 60L * 60L * 24L // for one day
     )
     val otpService = OTPService(
         emailRepository = emailRepository,
@@ -40,7 +40,10 @@ fun Application.module() {
         tokenConfig = tokenConfig,
         otpService = otpService
     )
-    val chatRepository = ChatRepositoryImpl(database = mongoDatabase)
+    val chatRepository = ChatRepositoryImpl(
+        database = mongoDatabase,
+        authenticationRepo = authenticationRepo
+    )
 
     configureSecurity(
         tokenConfig = tokenConfig
