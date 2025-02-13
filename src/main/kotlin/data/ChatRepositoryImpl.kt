@@ -22,12 +22,18 @@ class ChatRepositoryImpl(
     private val chatRoomCollection = database.getCollection<ChatRoom>("chat_rooms")
     private val messageCollection = database.getCollection<ChatMessage>("messages")
 
-    override suspend fun addMessage(message: ChatMessage): BaseResponse<String> {
+    override suspend fun addMessage(message: ChatMessage, senderEmail: String): BaseResponse<String> {
+        val chatRoom = chatRoomCollection.find(
+            Filters.eq("_id", message.chatRoomId)
+        ).firstOrNull()
+        if(chatRoom == null) return BaseResponse.Failure("Invalid chatRoomId", HttpStatusCode.BadRequest.value)
+        if(!chatRoom.participants.contains(senderEmail)) return BaseResponse.Failure("Permission denied!.", HttpStatusCode.Unauthorized.value)
+
         val inserted = messageCollection.insertOne(message)
         return if(inserted.wasAcknowledged()) {
             BaseResponse.Success("Insertion successful", inserted.insertedId.toStringX())
         } else {
-            BaseResponse.Failure("Error adding message to database")
+            BaseResponse.Failure("Error adding message to database", HttpStatusCode.ServiceUnavailable.value)
         }
     }
 
@@ -60,6 +66,7 @@ class ChatRepositoryImpl(
     }
 
     override suspend fun updateMessageStatus(messageId: ObjectId, status: MessageStatus): Boolean {
+        messageCollection.find(Filters.eq("_id", messageId)).firstOrNull() ?: return false
         return messageCollection.updateOne(
             Filters.eq("_id", messageId),
             Updates.set("status", status),

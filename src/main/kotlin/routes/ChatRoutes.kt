@@ -1,14 +1,14 @@
 package com.example.routes
 
-import com.example.data.model.auth.SignupCred
 import com.example.data.model.chat.ChatMessage
 import com.example.data.model.chat.MessageStatus
 import com.example.domain.chat.ChatRepository
 import com.example.domain.model.network.BaseResponse
-import com.example.routes.authenticate
+import com.example.utils.isHexString
+import com.example.utils.stringToObjectId
 import io.ktor.http.*
 import io.ktor.server.auth.*
-import io.ktor.server.request.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -61,11 +61,17 @@ fun Route.chatRoutes(
                 call.respond(HttpStatusCode.BadRequest, "ChatRoomId is required!")
                 return@webSocket
             }
-            val senderEmail = call.request.queryParameters["senderEmail"]
+            if(!isHexString(chatRoomId) || chatRoomId.length != 24) {
+                call.respond(HttpStatusCode.BadRequest, "Invalid format of chatRoomId!")
+                return@webSocket
+            }
+            // get the senderEmail from token
+            val senderEmail = call.principal<JWTPrincipal>()?.getClaim("userEmail", String::class)
             if(senderEmail == null) {
                 call.respond(HttpStatusCode.BadRequest, "SenderId is required!")
                 return@webSocket
             }
+
             val timeStamp = call.request.queryParameters["timeStamp"]?.toLong()
             if(timeStamp == null) {
                 call.respond(HttpStatusCode.BadRequest, "TimeStamp is required!")
@@ -84,13 +90,23 @@ fun Route.chatRoutes(
                             timeStamp = timeStamp,
                             status = MessageStatus.NONE
                         )
-                        val inserted = chatRepository.addMessage(message)
-                        when(inserted) {
+                        val insertionResponse = chatRepository.addMessage(message, senderEmail)
+                        when(insertionResponse) {
                             is BaseResponse.Failure -> {
-                                call.respond(HttpStatusCode.ServiceUnavailable, "Message uploading failed!")
+                                when(insertionResponse.errorInt) {
+                                    503 -> call.respond(HttpStatusCode.ServiceUnavailable, insertionResponse.errorMessage )
+                                    401 -> {
+                                        call.respond(HttpStatusCode.Unauthorized, "Permission denied!.")
+                                        return@webSocket
+                                    }
+                                    400 -> {
+                                        call.respond(HttpStatusCode.BadRequest, "Invalid chatRoomId")
+                                        return@webSocket
+                                    }
+                                }
                             }
                             is BaseResponse.Success<String> -> {
-                                chatRepository.updateMessageStatus(ObjectId(inserted.data), MessageStatus.UPLOADED)
+                                chatRepository.updateMessageStatus(ObjectId(insertionResponse.data), MessageStatus.UPLOADED)
                                 call.respond(HttpStatusCode.OK,  "Message uploaded.")
                             }
                         }
@@ -102,13 +118,13 @@ fun Route.chatRoutes(
         }
 
         get("/messageDelivered") {
-            val messageId = call.request.queryParameters["messageId"]
-            if(messageId == null) {
-                call.respond(HttpStatusCode.BadRequest, "Message id is required!.")
+            val messageIdString = call.request.queryParameters["messageId"]
+            if(stringToObjectId(messageIdString) == null) {
+                call.respond(HttpStatusCode.BadRequest, "Message id is required! and should be 24 hex char long!")
                 return@get
             }
             val updated = chatRepository.updateMessageStatus(
-                messageId = ObjectId(messageId),
+                messageId = ObjectId(messageIdString),
                 status = MessageStatus.DELIVERED
             )
             if(updated) {

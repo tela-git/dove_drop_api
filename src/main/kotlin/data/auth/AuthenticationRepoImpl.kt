@@ -96,6 +96,10 @@ class AuthenticationRepoImpl(
                     TokenClaim(
                         name = "userId",
                         value = user.id!!.toHexString()
+                    ),
+                    TokenClaim(
+                            name = "userEmail",
+                    value = user.email
                     )
                 )
                 BaseResponse.Success("", LoginSuccessResponse(token))

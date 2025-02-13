@@ -137,5 +137,13 @@ fun Route.getUserId() {
                 mapOf("userId" to userId)
             )
         }
+        get("userEmail") {
+            val principal = call.principal<JWTPrincipal>()
+            val userEmail = principal?.getClaim(name = "userEmail", clazz = String::class)
+            call.respond(
+                HttpStatusCode.OK,
+                mapOf("userEmail" to userEmail)
+            )
+        }
     }
 }
