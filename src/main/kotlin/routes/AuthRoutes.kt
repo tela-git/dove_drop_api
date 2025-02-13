@@ -129,7 +129,7 @@ fun Route.authenticate() {
 
 fun Route.getUserId() {
     authenticate {
-        get("/userId") {
+        get("secret/userId") {
             val principal = call.principal<JWTPrincipal>()
             val userId = principal?.getClaim(name = "userId", clazz = String::class)
             call.respond(
@@ -137,7 +137,7 @@ fun Route.getUserId() {
                 mapOf("userId" to userId)
             )
         }
-        get("userEmail") {
+        get("secret/userEmail") {
             val principal = call.principal<JWTPrincipal>()
             val userEmail = principal?.getClaim(name = "userEmail", clazz = String::class)
             call.respond(
