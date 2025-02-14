@@ -40,8 +40,7 @@ fun Route.authRoutes(
             call.respond(HttpStatusCode.BadRequest, "Enter valid details!")
             return@post
         }
-        val response = authenticationRepo.loginUser(loginCred)
-        when(response) {
+        when(val response = authenticationRepo.loginUser(loginCred)) {
             is BaseResponse.Failure -> {
                 val logging = response.errorMessage
                 when(response.errorInt) {

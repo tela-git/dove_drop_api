@@ -41,7 +41,8 @@ class AuthenticationRepoImpl(
                 imageUrl = "",
                 id = ObjectId(),
                 salt = saltedHash.salt,
-                verified = false
+                verified = false,
+                availability = "Available"
             )
             var error : Exception? = null
             val inserted = try {

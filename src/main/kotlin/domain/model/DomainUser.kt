@@ -8,6 +8,6 @@ data class DomainUser(
     val id: String,
     val fullName: String?,
     val email: String,
-    val password: String,
     val imageUrl: String?,
+    val availability: String,
 )

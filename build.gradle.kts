@@ -51,6 +51,10 @@ dependencies {
 
     implementation("com.sun.mail:javax.mail:1.6.2")
 
+    //for appwrite
+    implementation("io.appwrite:sdk-for-kotlin:7.0.0")
+
+
 
     implementation("io.insert-koin:koin-ktor:$koin_version")
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")

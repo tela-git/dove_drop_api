@@ -1,6 +1,7 @@
 package com.example
 
 import com.example.data.ChatRepositoryImpl
+import com.example.data.account.UserAccountRepoImpl
 import com.example.data.auth.AuthenticationRepoImpl
 import com.example.data.auth.OTPService
 import com.example.data.database.remote.configureDatabases
@@ -12,6 +13,7 @@ import com.example.security.configureSecurity
 import com.example.security.hashing.SHA256HashingService
 import com.example.security.token.JWTTokenService
 import com.example.security.token.TokenConfig
+import io.appwrite.Client
 import io.ktor.server.application.*
 
 fun main(args: Array<String>) {
@@ -44,7 +46,9 @@ fun Application.module() {
         database = mongoDatabase,
         authenticationRepo = authenticationRepo
     )
-
+    val userAccountRepository = UserAccountRepoImpl(
+        database = mongoDatabase
+    )
     configureSecurity(
         tokenConfig = tokenConfig
     )
@@ -55,6 +59,7 @@ fun Application.module() {
     configureRouting(
         authenticationRepo = authenticationRepo,
         otpService = otpService,
-        chatRepository = chatRepository
+        chatRepository = chatRepository,
+        userAccountRepository = userAccountRepository
     )
 }

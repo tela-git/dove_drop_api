@@ -12,15 +12,16 @@ data class User(
     val password: String,
     val imageUrl: String?,
     val salt: String,
-    val verified: Boolean
+    val verified: Boolean,
+    val availability: String?,
 )
 
-fun User.toDomainUser() {
-    DomainUser(
+fun User.toDomainUser(): DomainUser {
+    return DomainUser(
         fullName = fullName,
         email = email,
-        password = password,
         imageUrl = imageUrl,
-        id = id?.toHexString() ?: ""
+        id = id?.toHexString() ?: "",
+        availability = availability ?: ""
     )
 }
