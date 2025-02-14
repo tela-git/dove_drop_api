@@ -4,6 +4,7 @@ import com.example.data.auth.OTPService
 import com.example.data.model.auth.*
 import com.example.domain.auth.AuthenticationRepo
 import com.example.domain.model.network.BaseResponse
+import com.example.utils.emailRegex
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -103,18 +104,44 @@ fun Route.authRoutes(
         }
 
     }
-    post("/auth/forgot-password") {
-        val email: ForgotPasswordData = runCatching { call.receiveNullable<ForgotPasswordData>() }
+    get("/auth/forgot-password") {
+        val email = runCatching { call.queryParameters["email"] }
             .getOrNull() ?: run {
             call.respond(HttpStatusCode.BadRequest, "Enter email in a valid format!")
-            return@post
+            return@get
         }
-        val sent = otpService.sendOTPForVerification(toEmail = email.email)
+        if(!email.matches(emailRegex)) {
+            call.respond(HttpStatusCode.BadRequest, "Enter email in a valid format!")
+            return@get
+        }
+
+        val sent = otpService.sendOTPForVerification(toEmail = email)
         if(sent) {
-            call.respond(HttpStatusCode.OK, "OTP send to your email: ${email.email}")
-            return@post
+            call.respond(HttpStatusCode.OK, "OTP send to your email: $email")
+            return@get
         } else {
             call.respond(HttpStatusCode.ServiceUnavailable, "Error sending OTP!, please try after some time.")
+            return@get
+        }
+    }
+
+    get("/auth/resend-otp") {
+        val email = runCatching { call.queryParameters["email"] }
+            .getOrNull() ?: run {
+            call.respond(HttpStatusCode.BadRequest, "Email is required to get OTP!")
+            return@get
+        }
+        if(!email.matches(emailRegex)) {
+            call.respond(HttpStatusCode.BadRequest, "Enter email in a valid format!")
+            return@get
+        }
+        val sent = otpService.sendOTPForVerification(toEmail = email)
+        if(sent) {
+            call.respond(HttpStatusCode.OK, "OTP send to your email: $email")
+            return@get
+        } else {
+            call.respond(HttpStatusCode.ServiceUnavailable, "Error sending OTP!, please try after some time.")
+            return@get
         }
     }
 }
