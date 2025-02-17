@@ -32,6 +32,9 @@ fun Application.configureRouting(
             userAccountRepository = userAccountRepository,
         )
 
+        //Terms&Conditions
+        agreementRoutes()
+
         //Authenticated routes
         authenticate()
         getUserId()

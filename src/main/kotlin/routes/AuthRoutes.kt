@@ -4,6 +4,7 @@ import com.example.data.auth.OTPService
 import com.example.data.model.auth.*
 import com.example.domain.auth.AuthenticationRepo
 import com.example.domain.model.network.BaseResponse
+import com.example.domain.model.network.BaseResult
 import com.example.utils.emailRegex
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -18,17 +19,62 @@ fun Route.authRoutes(
 ) {
     post("/auth/signup") {
         val signupCred: SignupCred = runCatching<SignupCred?> { call.receiveNullable<SignupCred>() }.getOrNull() ?: run {
-            call.respond(HttpStatusCode.BadRequest, "Enter valid details!")
+            call.respond(
+                HttpStatusCode.BadRequest,
+                SignUpResponse<String>(
+                    status = "Error",
+                    message = SignUpError.InvalidCredFormat.value,
+                    data = null
+                )
+            )
             return@post
         }
         when(val response = authenticationRepo.signupUser(signupCred)) {
             is BaseResponse.Failure -> {
                 val logThis = response.errorMessage
-                call.respond(HttpStatusCode(response.errorInt ?: 400, ""), response.errorMessage)
+                when(response.errorMessage) {
+                    SignUpError.UserAlreadyExists.value -> {
+                        call.respond(
+                            HttpStatusCode.Conflict,
+                            SignUpResponse<String>(
+                                status = "Error",
+                                message = SignUpError.UserAlreadyExists.value,
+                                data = null
+                            )
+                        )
+                    }
+                    SignUpError.ErrorSendingOTP.value -> {
+                        call.respond(
+                            HttpStatusCode.ServiceUnavailable,
+                            SignUpResponse<String>(
+                                status = "Error",
+                                message = SignUpError.ErrorSendingOTP.value,
+                                data = null
+                            )
+                        )
+                    }
+                    SignUpError.UnknownError.value -> {
+                        call.respond(
+                            HttpStatusCode.NotFound,
+                            SignUpResponse<String>(
+                                status = "Error",
+                                message = SignUpError.UnknownError.value,
+                                data = null
+                            )
+                        )
+                    }
+                }
                 return@post
             }
             is BaseResponse.Success<*> -> {
-                call.respond(HttpStatusCode.OK, "OTP sent to your your email address")
+                call.respond(
+                    HttpStatusCode.OK,
+                    SignUpResponse<String>(
+                        status = "Success",
+                        message = "OTP successfully sent to your email: ${signupCred.email}",
+                        data = null
+                    )
+                    )
                 return@post
             }
         }
@@ -37,23 +83,56 @@ fun Route.authRoutes(
 
     post("/auth/login") {
         val loginCred: LoginCred = runCatching<LoginCred?> { call.receiveNullable<LoginCred>() }.getOrNull() ?: run {
-            call.respond(HttpStatusCode.BadRequest, "Enter valid details!")
+            call.respond(
+                HttpStatusCode.BadRequest,mapOf(
+                "status" to "Error",
+                "message" to "Enter valid details!",
+                "data" to null
+            ))
             return@post
         }
         when(val response = authenticationRepo.loginUser(loginCred)) {
             is BaseResponse.Failure -> {
                 val logging = response.errorMessage
                 when(response.errorInt) {
-                    404 ->  call.respond(HttpStatusCode.BadRequest, "Enter valid details!")
-                    401 ->  call.respond(HttpStatusCode.BadRequest, "Enter valid details!")
-                    403 -> call.respond(HttpStatusCode.Forbidden, "Verify your email first.")
-                    else ->  call.respond(HttpStatusCode.BadRequest, "Something went wrong!")
+                    404 ->  call.respond(HttpStatusCode.BadRequest,
+                        mapOf(
+                            "status" to "Error",
+                            "message" to "Enter valid details!",
+                            "data" to null
+                        )
+                    )
+                    401 ->  call.respond(HttpStatusCode.BadRequest,
+                        mapOf(
+                            "status" to "Error",
+                            "message" to "Enter valid details!",
+                            "data" to null
+                        )
+                    )
+                    403 -> call.respond(HttpStatusCode.Forbidden,
+                        mapOf(
+                            "status" to "Error",
+                            "message" to "Please verify your email!",
+                            "data" to null
+                        )
+                    )
+                    else ->  call.respond(HttpStatusCode.NotFound,
+                        mapOf(
+                            "status" to "Error",
+                            "message" to "Something went wrong!",
+                            "data" to null
+                        )
+                    )
                 }
             }
             is BaseResponse.Success<LoginSuccessResponse> -> {
                 call.respond(
                     HttpStatusCode.OK,
-                    mapOf("token" to response.data.token)
+                    mapOf(
+                        "status" to "Success",
+                        "message" to "Login successful.",
+                        "data" to response.data.token
+                    )
                 )
             }
         }
@@ -62,24 +141,112 @@ fun Route.authRoutes(
     post("/auth/verify-email") {
         val otpReceived: OTPReceivable = runCatching<OTPReceivable?> { call.receiveNullable<OTPReceivable>() }
             .getOrNull() ?: run {
-                call.respond(HttpStatusCode.BadRequest, "Enter 6 digit OTP correctly.")
-            return@post
-        }
-        if(otpReceived.otp.length == 6 && otpReceived.otp.all { it.isDigit() } ) {
-            val verified = authenticationRepo.verifyEmail(
-                otpReceivable = otpReceived
-            )
-            if(verified) {
-                val added = authenticationRepo.updateUserToVerified(email = otpReceived.email)
-                if(added) call.respond(HttpStatusCode.OK, "Your email is verified.")
-            } else {
-                call.respond(HttpStatusCode.BadRequest, "Invalid OTP entered.")
-            }
-        } else {
-            call.respond(HttpStatusCode.BadRequest, "Enter 6 digit OTP correctly.")
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf(
+                        "status" to "Error",
+                        "message" to VerifyEmailError.BadRequest.value
+                    )
+                )
             return@post
         }
 
+        if(otpReceived.otp.length == 6 && otpReceived.otp.all { it.isDigit() } ) {
+            val response = authenticationRepo.verifyEmail(
+                otpReceivable = otpReceived
+            )
+            when(response) {
+                is BaseResult.Success -> {
+                    val added = authenticationRepo.updateUserToVerified(email = otpReceived.email)
+                    if(added) {
+                        call.respond(
+                            HttpStatusCode.Created,
+                            mapOf(
+                                "status" to "Success",
+                                "message" to "Email Verified Successfully."
+                            )
+                        )
+                        return@post
+                    }
+                    else {
+                        call.respond(
+                            HttpStatusCode.ServiceUnavailable,
+                            mapOf(
+                                "status" to "Error",
+                                "message" to VerifyEmailError.ServerError.value
+                            )
+                        )
+                        println("VerifyEmail: unable to update the user account to verified")
+                        return@post
+                    }
+                }
+                is BaseResult.Error<VerifyEmailError> -> {
+                    when(response.error) {
+                        is VerifyEmailError.InvalidOTP -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to VerifyEmailError.InvalidOTP.value
+                                )
+                            )
+                            return@post
+                        }
+                        VerifyEmailError.BadRequest -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to VerifyEmailError.BadRequest.value
+                                )
+                            )
+                            return@post
+                        }
+                        VerifyEmailError.NoOTPToVerify -> {
+                            call.respond(
+                                HttpStatusCode.NotFound,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to VerifyEmailError.BadRequest
+                                )
+                            )
+                            println("VerifyEmail: ${response.error.value}")
+                            return@post
+                        }
+                        VerifyEmailError.ServerError ->  {
+                            call.respond(
+                                HttpStatusCode.ServiceUnavailable,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to VerifyEmailError.ServerError.value
+                                )
+                            )
+                            println("VerifyEmail: ${response.error.value}")
+                            return@post
+                        }
+                        VerifyEmailError.UnknownError -> {
+                            call.respond(
+                                HttpStatusCode.ServiceUnavailable,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to VerifyEmailError.UnknownError.value
+                                )
+                            )
+                            return@post
+                        }
+                    }
+                }
+            }
+        } else {
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf(
+                    "status" to "Error",
+                    "message" to VerifyEmailError.BadRequest.value
+                )
+            )
+            return@post
+        }
     }
 
     post("/auth/reset-password") {

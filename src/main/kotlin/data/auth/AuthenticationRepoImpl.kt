@@ -4,6 +4,7 @@ import com.example.data.model.*
 import com.example.data.model.auth.*
 import com.example.domain.auth.AuthenticationRepo
 import com.example.domain.model.network.BaseResponse
+import com.example.domain.model.network.BaseResult
 import com.example.domain.model.security.SaltedHash
 import com.example.domain.security.HashingService
 import com.example.domain.security.TokenService
@@ -29,8 +30,7 @@ class AuthenticationRepoImpl(
         val userInDb = checkUserExistence(signupCred.email)
         if(userInDb != null && userInDb.verified) {
             return BaseResponse.Failure(
-                errorMessage = "User already exists",
-                errorInt = HttpStatusCode.Conflict.value
+                errorMessage = SignUpError.UserAlreadyExists.value
             )
         } else {
             val saltedHash = hashingService.generateSaltedHash(value = signupCred.password, saltLength = 32)
@@ -71,9 +71,9 @@ class AuthenticationRepoImpl(
                 val otpGenerated = otpService.sendOTPForVerification(signupCred.email)
                 if(otpGenerated)
                     BaseResponse.Success<User?>("OTP sent", data = null)
-                else BaseResponse.Failure(errorMessage = "Error in sending OTP.")
+                else BaseResponse.Failure(errorMessage = SignUpError.ErrorSendingOTP.value)
             } else {
-                BaseResponse.Failure(errorMessage = "Error creating user. $error")
+                BaseResponse.Failure(errorMessage = SignUpError.UnknownError.value)
             }
         }
     }
@@ -114,20 +114,38 @@ class AuthenticationRepoImpl(
         ).firstOrNull()
     }
 
-    override suspend fun verifyEmail(otpReceivable: OTPReceivable): Boolean {
-        val otp = otpCollection.find(
-            Filters.eq("email", otpReceivable.email)
-        ).firstOrNull()
-        val verified = otp != null && otp.otp == otpReceivable.otp
-        return verified
+    override suspend fun verifyEmail(otpReceivable: OTPReceivable): BaseResult<String, VerifyEmailError> {
+        return try {
+            val otp = otpCollection.find(
+                Filters.eq("email", otpReceivable.email)
+            ).firstOrNull()
+
+            if(otp == null) {
+                BaseResult.Error(VerifyEmailError.NoOTPToVerify)
+            } else {
+                if(otp.otp == otpReceivable.otp) {
+                    BaseResult.Success("Success")
+                } else {
+                    BaseResult.Error(VerifyEmailError.InvalidOTP)
+                }
+            }
+        } catch (e: Exception) {
+            println("VerifyEmail: ${e.message}")
+            BaseResult.Error(VerifyEmailError.UnknownError)
+        }
     }
 
     override suspend fun updateUserToVerified(email: String): Boolean {
-        return usersCollection.updateOne(
-            Filters.eq("email", email),
-            Updates.set("verified", true),
-            UpdateOptions().upsert(true)
-        ).wasAcknowledged()
+        return try {
+            return usersCollection.updateOne(
+                Filters.eq("email", email),
+                Updates.set("verified", true),
+                UpdateOptions().upsert(true)
+            ).wasAcknowledged()
+        } catch (e: Exception) {
+            println("UpdateUserToVerified: ${e.message}")
+            false
+        }
     }
 
     override suspend fun resetPassword(resetPasswordData: ResetPasswordData): BaseResponse<Boolean> {
