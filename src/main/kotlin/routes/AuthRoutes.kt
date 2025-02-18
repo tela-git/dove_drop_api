@@ -273,20 +273,44 @@ fun Route.authRoutes(
     get("/auth/forgot-password") {
         val email = runCatching { call.queryParameters["email"] }
             .getOrNull() ?: run {
-            call.respond(HttpStatusCode.BadRequest, "Enter email in a valid format!")
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf(
+                    "status" to "Error",
+                    "message" to "INVALID_REQUEST_FORMAT"
+                )
+            )
             return@get
         }
         if(!email.matches(emailRegex)) {
-            call.respond(HttpStatusCode.BadRequest, "Enter email in a valid format!")
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf(
+                    "status" to "Error",
+                    "message" to "INVALID_REQUEST_FORMAT"
+                )
+            )
             return@get
         }
 
         val sent = otpService.sendOTPForVerification(toEmail = email)
         if(sent) {
-            call.respond(HttpStatusCode.OK, "OTP send to your email: $email")
+            call.respond(
+                HttpStatusCode.OK,
+                mapOf(
+                    "status" to "Success",
+                    "message" to "OTP_SENT"
+                )
+            )
             return@get
         } else {
-            call.respond(HttpStatusCode.ServiceUnavailable, "Error sending OTP!, please try after some time.")
+            call.respond(
+                HttpStatusCode.ServiceUnavailable,
+                mapOf(
+                    "status" to "Error",
+                    "message" to "SERVER_ERROR"
+                )
+            )
             return@get
         }
     }
