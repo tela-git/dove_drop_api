@@ -292,7 +292,17 @@ fun Route.authRoutes(
             )
             return@get
         }
-
+        val userExists = authenticationRepo.checkUserExistence(email)
+        if(userExists == null) {
+            call.respond(
+                HttpStatusCode.NotFound,
+                mapOf(
+                    "status" to "Error",
+                    "message" to "INVALID_REQUEST"
+                )
+            )
+            return@get
+        }
         val sent = otpService.sendOTPForVerification(toEmail = email)
         if(sent) {
             call.respond(

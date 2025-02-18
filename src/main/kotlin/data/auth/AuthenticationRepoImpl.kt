@@ -109,9 +109,14 @@ class AuthenticationRepoImpl(
     }
 
     override suspend fun checkUserExistence(email: String): User? {
-        return usersCollection.find(
-            Filters.eq("email", email)
-        ).firstOrNull()
+        return try {
+            usersCollection.find(
+                Filters.eq("email", email)
+            ).firstOrNull()
+        } catch (e: Exception) {
+            println("CheckUserExistence: ${e.message}")
+            null
+        }
     }
 
     override suspend fun verifyEmail(otpReceivable: OTPReceivable): BaseResult<String, VerifyEmailError> {
