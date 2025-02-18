@@ -207,7 +207,7 @@ fun Route.authRoutes(
                                 HttpStatusCode.NotFound,
                                 mapOf(
                                     "status" to "Error",
-                                    "message" to VerifyEmailError.BadRequest
+                                    "message" to VerifyEmailError.BadRequest.value
                                 )
                             )
                             println("VerifyEmail: ${response.error.value}")
@@ -252,24 +252,85 @@ fun Route.authRoutes(
     post("/auth/reset-password") {
         val resetPasswordData: ResetPasswordData = runCatching { call.receiveNullable<ResetPasswordData>() }
             .getOrNull() ?: run {
-                call.respond(HttpStatusCode.BadRequest, "Enter data in a valid format!")
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf(
+                        "status" to "Error",
+                        "message" to ResetPasswordError.InvalidRequestFormat.name
+                    )
+                )
             return@post
         }
         if(resetPasswordData.otp.length == 6 && resetPasswordData.otp.all { it.isDigit() } ) {
-            when(val hasResetResponse = authenticationRepo.resetPassword(resetPasswordData)) {
-                is BaseResponse.Success -> {
-                    call.respond(HttpStatusCode.OK, hasResetResponse.message)
+            val resetResponse = authenticationRepo.resetPassword(resetPasswordData)
+            when(resetResponse) {
+                is BaseResult.Success<String> -> {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        mapOf(
+                            "status" to "Success",
+                            "message" to "PASSWORD_RESET_SUCCESSFUL"
+                        )
+                    )
+                    return@post
                 }
-                is BaseResponse.Failure -> {
-                    call.respond(HttpStatusCode.BadRequest, hasResetResponse.errorMessage)
+                is BaseResult.Error<ResetPasswordError> -> {
+                    when(resetResponse.error) {
+                        is ResetPasswordError.InvalidOTP -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to ResetPasswordError.InvalidOTP.name
+                                )
+                            )
+                            return@post
+                        }
+                        is ResetPasswordError.InvalidRequestFormat -> {
+                            call.respond(
+                                HttpStatusCode.BadRequest,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to ResetPasswordError.InvalidRequestFormat.name
+                                )
+                            )
+                            return@post
+                        }
+                        is ResetPasswordError.ServerError -> {
+                            call.respond(
+                                HttpStatusCode.ServiceUnavailable,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to ResetPasswordError.ServerError.name
+                                )
+                            )
+                            return@post
+                        }
+                        is ResetPasswordError.UnknownError -> {
+                            call.respond(
+                                HttpStatusCode.NotFound,
+                                mapOf(
+                                    "status" to "Error",
+                                    "message" to ResetPasswordError.UnknownError.name
+                                )
+                            )
+                            return@post
+                        }
+                    }
                 }
             }
         } else {
-            call.respond(HttpStatusCode.BadRequest, "Enter 6 digit OTP correctly.")
+            call.respond(
+                HttpStatusCode.BadRequest,
+                mapOf(
+                    "status" to "Error",
+                    "message" to ResetPasswordError.InvalidRequestFormat.name
+                )
+            )
             return@post
         }
-
     }
+
     get("/auth/forgot-password") {
         val email = runCatching { call.queryParameters["email"] }
             .getOrNull() ?: run {

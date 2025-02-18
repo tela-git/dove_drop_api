@@ -16,5 +16,5 @@ interface AuthenticationRepo {
 
     suspend fun updateUserToVerified(email:String): Boolean
 
-    suspend fun resetPassword(resetPasswordData: ResetPasswordData): BaseResponse<Boolean>
+    suspend fun resetPassword(resetPasswordData: ResetPasswordData): BaseResult<String, ResetPasswordError>
 }

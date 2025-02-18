@@ -153,24 +153,35 @@ class AuthenticationRepoImpl(
         }
     }
 
-    override suspend fun resetPassword(resetPasswordData: ResetPasswordData): BaseResponse<Boolean> {
-        val otp = otpCollection.find(
-            Filters.eq("email", resetPasswordData.email)
-        ).firstOrNull()
+    override suspend fun resetPassword(resetPasswordData: ResetPasswordData): BaseResult<String, ResetPasswordError> {
+        return try {
+            val otp = otpCollection.find(
+                Filters.eq("email", resetPasswordData.email)
+            ).firstOrNull()
 
-        return if(otp == null || otp.otp != resetPasswordData.otp) {
-            BaseResponse.Failure(errorMessage = "Incorrect otp!", errorInt = 400)
-        } else {
-            val saltedHash = hashingService.generateSaltedHash(value = resetPasswordData.newPassword, saltLength = 32)
-            val updated = usersCollection.updateOne(
-                Filters.eq("email", resetPasswordData.email),
-                Updates.combine(
-                    Updates.set("password", saltedHash.hash),
-                    Updates.set("salt", saltedHash.salt)
-                ),
-                UpdateOptions().upsert(true)
-            ).wasAcknowledged()
-            if(updated) BaseResponse.Success(message = "Password reset successful.", true) else BaseResponse.Failure(errorMessage = "Something went wrong", errorInt = 400)
+            if (otp == null || otp.otp != resetPasswordData.otp) {
+                BaseResult.Error(ResetPasswordError.InvalidOTP)
+            } else {
+                val saltedHash =
+                    hashingService.generateSaltedHash(value = resetPasswordData.newPassword, saltLength = 32)
+                val updated = usersCollection.updateOne(
+                    Filters.eq("email", resetPasswordData.email),
+                    Updates.combine(
+                        Updates.set("password", saltedHash.hash),
+                        Updates.set("salt", saltedHash.salt)
+                    ),
+                    UpdateOptions().upsert(true)
+                ).wasAcknowledged()
+
+                if (updated) {
+                    BaseResult.Success("Password updated successfully")
+                } else {
+                    BaseResult.Error(ResetPasswordError.ServerError)
+                }
+            }
+        } catch (e: Exception) {
+            println("Error in Resetting password: ${e.message}")
+            BaseResult.Error(ResetPasswordError.UnknownError)
         }
     }
 }

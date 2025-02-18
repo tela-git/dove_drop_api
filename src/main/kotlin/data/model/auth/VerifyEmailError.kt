@@ -7,3 +7,4 @@ sealed class VerifyEmailError(val value: String) {
     data object UnknownError: VerifyEmailError("UNKNOWN_ERROR")
     data object NoOTPToVerify: VerifyEmailError("NO_OTP_TO_VERIFY")
 }
+
